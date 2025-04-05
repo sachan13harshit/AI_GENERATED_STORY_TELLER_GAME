@@ -16,7 +16,6 @@ const StoryPage = () => {
 
   const loadExistingStory = useCallback(async () => {
     try {
-      // Only attempt to load if we have a valid ID and it's the initial load
       if (id && isInitialLoad) {
         const story = await loadStory(id);
         if (!story) {
@@ -51,6 +50,27 @@ const StoryPage = () => {
     }
   };
 
+  const handleDownloadStory = () => {
+    if (!currentStory) return;
+
+    const storyText = currentStory.segments
+      .map((segment, index) => {
+        const segmentNumber = index + 1;
+        return `Chapter ${segmentNumber}:\n${segment.content}\n\n`;
+      })
+      .join('\n');
+
+    const blob = new Blob([storyText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentStory.title || 'story'}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     if (id) {
       loadExistingStory();
@@ -79,7 +99,6 @@ const StoryPage = () => {
     );
   }
 
-  // If we're creating a new story (no id) or haven't started the story yet
   if (!id || !storyStarted) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -104,13 +123,46 @@ const StoryPage = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">{currentStory.title}</h1>
-      <StoryContent content={currentStory.segments[currentStory.currentSegmentIndex]?.content} />
-      <StoryChoices 
-        choices={currentStory.segments[currentStory.currentSegmentIndex]?.choices || []}
-        onChoiceSelect={handleChoiceSelect}
-      />
+    <div className="min-h-screen bg-gray-50">
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="bg-white rounded-lg shadow-sm p-8">
+          {currentStory.genre && (
+            <div className="mb-4">
+              <span className="inline-block bg-purple-100 text-purple-800 text-sm px-3 py-1 rounded-full">
+                {currentStory.genre}
+              </span>
+            </div>
+          )}
+          
+          <h1 className="text-4xl font-bold mb-8 text-gray-900">{currentStory.title}</h1>
+          
+          <div className="prose prose-lg max-w-none mb-8">
+            <StoryContent content={currentStory.segments[currentStory.currentSegmentIndex]?.content} />
+          </div>
+
+          <div className="mt-8">
+            <h2 className="text-2xl font-semibold mb-4 text-gray-900">What happens next?</h2>
+            <div className="mb-8">
+              <StoryChoices 
+                choices={currentStory.segments[currentStory.currentSegmentIndex]?.choices || []}
+                onChoiceSelect={handleChoiceSelect}
+              />
+            </div>
+          </div>
+
+          <div className="mt-8 flex justify-center">
+            <button
+              onClick={handleDownloadStory}
+              className="inline-flex items-center px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 shadow-sm hover:shadow-md"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+              Download Story
+            </button>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };
